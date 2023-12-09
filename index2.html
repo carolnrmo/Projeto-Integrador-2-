@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+
+ <!-- Montserrat Font -->
+ <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+ <!-- Material Icons -->
+ <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+
+ <!-- Custom CSS -->
+ <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <div class="grid-container">
+
+        <!-- Header -->
+        <header class="header">
+            <h2>Projeto Integrador 2 - Bancada de Ensino Hidráulica  </h2>
+            <img src="images/utfpr.png" style="width: 8%;">
+        </header>
+        <!-- End Header -->
+
+          <!-- Main -->
+            <main class="main-container">
+
+               
+    
+ <!-- Charts -->
+
+ <div class="charts">
+
+
+
+
+    <div class="charts-card">
+        <h3> Pressão 1 x Pressão 2</h3>
+        <div class="container">
+            <canvas id="myChart">
+    
+            </canvas>
+        </div>
+    </div>
+
+    <div class="charts-card">
+        <h3> Vazão</h3>
+        <div class="container">
+            <canvas id="chartVazao">
+    
+            </canvas>
+        </div>
+    </div>
+
+
+        <div class="charts-card">
+            <div class="container">
+                <canvas id="chartPressaoVazao">
+        
+                </canvas>
+            </div>      
+    </div>
+
+    <div class="card" style="height: 432px;">
+        <h2>   Valores Atuais: </h2>
+        <h1>    <div id="ultimaLeitura"></div></h1>
+        <h1>    <div id="ultimaLeitura2"></div></h1>
+      </div>
+
+  </div>
+
+
+
+</main>
+
+
+
+    <script>
+        $(document).ready(function() {
+            function getData() {
+                var url ="https://api.thingspeak.com/channels/2344745/fields/1,2,3,4,5.json?api_key=FYSMM11PWISG2CS4&results=20";
+                var urlCv1 ="https://api.thingspeak.com/channels/2344745/fields/4.json?api_key=FYSMM11PWISG2CS4&results=1";
+                var urlCv2= "https://api.thingspeak.com/channels/2344745/fields/5.json?api_key=FYSMM11PWISG2CS4&results=1"
+                
+                // Função para buscar o CV1
+                async function obterDadosDoThingSpeak() {
+                    try {
+                        // Realiza uma requisição HTTP para obter os dados
+                        const response = await fetch(urlCv1);
+                        const data = await response.json();
+
+                        // Verifica se há dados disponíveis
+                        if (data.feeds && data.feeds.length > 0) {
+                            // Obtém a última leitura
+                            const ultimaLeitura = data.feeds[0].field4;
+
+                            // Exibe a última leitura na página
+                            document.getElementById('ultimaLeitura').innerHTML = `<p>Potência 1: ${ultimaLeitura} cv</p>`;
+                        } else {
+                            console.error('Nenhum dado disponível.');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao obter dados do ThingSpeak:', error);
+                    }
+        }
+
+                        // Função para buscar o CV2
+                        async function obterDadosDoThingSpeak2() {
+                    try {
+                        // Realiza uma requisição HTTP para obter os dados
+                        const response = await fetch(urlCv2);
+                        const data = await response.json();
+
+                        // Verifica se há dados disponíveis
+                        if (data.feeds && data.feeds.length > 0) {
+                            // Obtém a última leitura
+                            const ultimaLeitura2 = data.feeds[0].field5;
+
+                            // Exibe a última leitura na página
+                            document.getElementById('ultimaLeitura2').innerHTML = `<p>Potência 2: ${ultimaLeitura2} cv</p>`;
+                        } else {
+                            console.error('Nenhum dado disponível.');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao obter dados do ThingSpeak:', error);
+                    }
+        }
+
+        // Chama a função para obter dados do ThingSpeak ao carregar a página
+        obterDadosDoThingSpeak();
+        obterDadosDoThingSpeak2();
+
+            
+                function formatarTimestamp(timestamp) {
+                    const data = new Date(timestamp);
+                    const horas = data.getHours();
+                    const dia = data.getDate();
+                    const minutos = data.getMinutes();
+                    const mes = data.getMonth() + 1;
+                    return ` ${dia}/${mes} ${horas}:${minutos}`;
+                }
+
+                $.getJSON(url, function(data) {
+                    var field1Values = [];
+                    var field2Values = [];
+                    var field3Values = [];
+                    var field4Values = [];
+                    var field5Values = [];
+                    var timestamps = [];
+
+                    $.each(data.feeds, function(index, feed) {
+						field1Values.push(feed.field1);
+						field2Values.push(feed.field2);
+                        field3Values.push(feed.field3);
+                        field4Values.push(feed.field5);
+                        field5Values.push(feed.field5);
+						timestamps.push(formatarTimestamp(feed.created_at));
+					});
+
+   
+                    var ctx = document.getElementById('myChart').getContext('2d');
+
+                    var chart = new Chart(ctx, {
+                        type:'line',
+                        data:{
+                            labels:timestamps,
+                            datasets:[{
+                                label: 'Pressão 1: ',
+                                data:field1Values,
+                                borderColor: '#4169e1',
+                                backgroundColor: '#4169e1',
+                                borderWidth: 2,
+                                fill: false,
+                            },
+                            {
+                                label: 'Pressão 2: ',
+                                data:field2Values,
+                                borderColor: '#03bb85',
+                                backgroundColor: '#03bb85',
+                                borderWidth: 2,
+                                fill: false,
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                yAxes: [{
+                                    thicks: {
+                                        beginAtZero: true
+                                    }
+                                }]
+                            }
+                        }
+                    });
+
+                        var ctx = document.getElementById('chartPressaoVazao').getContext('2d');
+
+                        var chart = new Chart(ctx, {
+                            type:'line',
+                            data:{
+                                labels:timestamps,
+                                datasets:[{
+                                    label: 'Potência 1: ',
+                                    data:field4Values,
+                                    borderColor: '#ff6400',
+                                    backgroundColor: '#ff6400',
+                                    borderWidth: 1,
+                                    fill: false,
+                                },
+                                {
+                                label: 'Potência 2: ',
+                                data:field5Values,
+                                borderColor: '#f0be00',
+                                backgroundColor: '#f0be00',
+                                borderWidth: 2,
+                                fill: false,
+                            }]   
+
+                            },
+                            options: {
+                                scales: {
+                                
+                                    yAxes: [{
+                                        thicks: {
+                                            beginAtZero: true
+                                        }
+                                    }]
+                                }
+                            }
+                        });
+ 
+                        var ctx = document.getElementById('chartVazao').getContext('2d');
+
+                        var chart = new Chart(ctx, {
+                            type:'line',
+                            data:{
+                                labels:timestamps,
+                                datasets:[{
+                                    label: 'Vazão: ',
+                                    data:field3Values,
+                                    borderColor: '#5A189A',
+                                    backgroundColor: '#5A189A',
+                                    borderWidth: 2,
+                                    fill: false,
+                                }]
+
+                            },
+                            options: {
+                                scales: {
+                                    yAxes: [{
+                                        thicks: {
+                                            beginAtZero: true
+                                        }
+                                    }]
+                                }
+                            }
+                        });
+
+                    var ctx = document.getElementById('myChart2').getContext('2d');
+
+                    var chart = new Chart(ctx, {
+                        type:'bar',
+                        data:{
+                            labels:timestamps,
+                            datasets:[{
+                                label: 'Pressão 1: ',
+                                data:field1Values,
+                                borderColor: '',
+                                backgroundColor: '#84bd00',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Pressão 2: ',
+                                data:field2Values,
+                                borderColor: '',
+                                backgroundColor: '#03bb85',
+                                borderWidth: 1
+                            },
+                            {
+                                type: 'line',
+                                label: 'Vazão: ',
+                                data:field3Values,
+                                borderColor: '',
+                                backgroundColor: '#ff0000',
+                                borderWidth: 1
+                            }]
+                            
+                        },
+                        options: {
+                            scales: {
+                                yAxes: [{
+                                    thicks: {
+                                        beginAtZero: true
+                                    }
+                                }]
+                            }
+                        }
+                    });
+
+                    
+
+                });
+
+            }
+            getData();
+
+        });
+    </script>
+</body>
+</html>
+
